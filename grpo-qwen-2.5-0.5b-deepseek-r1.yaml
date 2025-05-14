@@ -1,0 +1,70 @@
+# Model arguments
+model_revision: main
+torch_dtype: bfloat16
+attn_implementation: flash_attention_2
+bf16: true
+tf32: true
+
+# Dataset arguments
+dataset_id_or_path: 'openai/gsm8k'
+
+# Training arguments - Optimized based on 600-step analysis
+max_steps: 400               # Reduced from 600 as metrics plateau after ~400
+num_train_epochs: 6         # Adjusted for shorter steps
+gradient_accumulation_steps: 3  # Increased for better stability
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: false
+learning_rate: 2.5e-5       # Increased initial LR for faster convergence
+lr_scheduler_type: cosine_with_restarts  # Changed to maintain learning through plateaus
+warmup_ratio: 0.12          # Adjusted for 400 steps
+warmup_steps: 48           # 12% of max_steps
+
+
+
+# GRPO arguments - Optimized for consensus
+use_vllm: true
+num_generations: 12
+per_device_train_batch_size: 12  # Matches num_generations
+beta: 0.12                  # Reduced to control KL divergence growth
+max_prompt_length: 256
+max_completion_length: 256
+
+# Logging and evaluation
+logging_strategy: steps
+logging_steps: 40           # Increased frequency for better monitoring
+evaluation_strategy: steps
+eval_steps: 80             # More frequent evaluation
+report_to:
+  - tensorboard
+save_strategy: "steps"
+save_steps: 80            # More frequent checkpoints
+save_total_limit: 3
+seed: 42
+
+# Generation control - Tuned based on reward patterns
+generation_config:
+  do_sample: true
+  num_beams: 4
+  length_penalty: 1.5       # Increased to encourage complete answers
+  repetition_penalty: 1.35  # Increased slightly
+  no_repeat_ngram_size: 3
+  temperature: 0.82        # Slightly reduced for more focused sampling
+  top_p: 0.92
+  typical_p: 0.92
+
+# Training stability - Adjusted based on metrics
+stability_config:
+  max_grad_norm: 1.8       # Reduced based on gradient patterns
+  weight_decay: 0.06       # Increased for better regularization
+  gradient_clip_value: 1.8  # Matched with max_grad_norm
+  format_loss_scale: 0.40  # Adjusted based on format reward trends
+
+# Network arguments (unchanged)
+public_maddr: "/ip4/38.101.215.12/tcp/30002"
+host_maddr: "/ip4/0.0.0.0/tcp/38331"
+max_rounds: 10000
+
+# Model-specific arguments
+model_name_or_path: Gensyn/Qwen2.5-0.5B-Instruct
+output_dir: runs/gsm8k/multinode/Qwen2.5-0.5B-Instruct-Gensyn-Swarm
